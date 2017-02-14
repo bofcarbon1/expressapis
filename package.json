@@ -1,0 +1,18 @@
+{
+  "name": "expressapis",
+  "version": "0.0.0",
+  "description": "Express APIs with `express` server and MongoDB.",
+  "main": "server.js",
+  "repository": "",
+  "author": "Brian Quinn <bofcarbon1@gmail.com>",
+  "dependencies": {
+    "async": "~0.2.8",
+    "body-parser": "^1.15.2",
+    "express": "^3.2.6",
+    "mongodb": "^2.2.16",
+    "mongoose": "^4.7.2",
+    "mpromise": "^0.5.5",
+    "node-restful": "^0.2.5",
+    "socket.io": "~0.9.14"
+  }
+}
