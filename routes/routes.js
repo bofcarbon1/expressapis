@@ -14,13 +14,15 @@ module.exports = function(app) {
     var emailJ = "";
     var sitelinksJ = [];
     var servicesJ = [];
-    var skillsJ = [];
     var projectsJ = [];
     var projectJ = "";
     var projectID = "";
-    var skilltype = "";
     var projecttype = "";
-
+    var skillsJ = [];
+    var skillJ = "";
+    var skillID = "";
+    var skilltype = "";
+   
     // Initialize connection once
     MongoClient.connect("mongodb://localhost:27017/test", function(err, database) {
         if(err) return console.error(err);
@@ -128,10 +130,35 @@ module.exports = function(app) {
          });
     });
     
-    // Get resume skill data 
+    // Get resume skills (all)
+    app.get("/api/resume/allskills", function(req, res, next) {
+        db.collection("wr_skill").find({}, function(err, docs) {
+            if(err) return next(err);
+        docs.each(function(err, doc) {
+            if(err) {
+                res.json(err); 
+                console.log("Error:",err);
+            }
+            if(doc) {
+                // store the skill detail in a json array
+                skillsJ.push({ 
+                    "id" : doc.id,
+                    "skillname" : doc.skillname,
+                    "skilltype" : doc.skilltype
+                });
+            }
+            else {
+                res.json(skillsJ);
+                skillsJ = [];
+                res.end();
+                }
+            });
+        });
+    });
+    
+    // Get resume skill data by skill type
     app.get("/api/resume/skills", function(req, res, next) {
         skilltype = req.param('skilltype');
-        //console.log("skilltype: ", skilltype);
         db.collection("wr_skill").find({}, function(err, docs) {
             if(err) return next(err);
         docs.each(function(err, doc) {
@@ -156,9 +183,10 @@ module.exports = function(app) {
         });
     });
   
-    // Get all resume projects data 
-    app.get("/api/resume/projects", function(req, res, next) {
-        db.collection("wr_project").find({}, function(err, docs) {
+    // Get resume skill data by skill ID
+    app.get("/api/resume/skill", function(req, res, next) {
+        skillID = req.param('skillID');
+        db.collection("wr_skill").find({}, function(err, docs) {
             if(err) return next(err);
         docs.each(function(err, doc) {
             if(err) {
@@ -166,8 +194,67 @@ module.exports = function(app) {
                 console.log("Error:",err);
             }
             if(doc) {
-                // store the project detail in a json array
-                //if (projecttype === doc.type) {
+                // store the skill detail in a json string
+                if (skillID == doc.id) {
+                    skillJ = { 
+                        "skillname" : doc.skillname,
+                        "skilltype" : doc.skilltype
+                    };
+                }
+            }
+            else {
+                console.log("skillJ: ", skillJ);
+                res.json(skillJ);
+                skillJ = [];
+                res.end();
+                }
+            });
+        });
+    });
+    
+ 
+    
+    // Update a resume skill 
+    app.get("/api/resume/updSkill", function(req, res, next) {
+        var id = req.param('id');
+        var skillname = req.param('skillname');
+        var skilltype = req.param('skilltype');
+        var query = {"id":Number(id)};
+        var doc = {
+            "id":Number(id),
+            "skillname":skillname, 
+            "skilltype":skilltype
+            };
+        db.collection("wr_skill").update(query, doc, function(err, result) {
+            if(err) {
+                console.log("Error:",err);
+                return next(err);
+            };
+            res.json(result);
+            res.end();
+        });
+    });
+    
+    // Get a count of resume skills  
+    app.get("/api/resume/skillCount", function(req, res, next) {
+        db.collection("wr_skill").count({}, function(err, result) {
+            if(err) return next(err);
+            res.json(result);
+            res.end();
+        });
+    });
+    
+    // Get all resume projects data 
+    app.get("/api/resume/projects", function(req, res, next) {
+        db.collection("wr_project").find({}, function(err, docs) {
+            if(err) return next(err);
+            docs.each(function(err, doc) {
+                if(err) {
+                    res.json(err); 
+                    console.log("Error:",err);
+                }
+                if(doc) {
+                    // store the project detail in a json array
                     projectsJ.push({ 
                         "id" : doc.id,
                         "name" : doc.name,
@@ -175,13 +262,36 @@ module.exports = function(app) {
                         "note" : doc.note,
                         "type" : doc.type
                     });
-                //}
-            }
-            else {
-                res.json(projectsJ);
-                projectsJ = [];
-                res.end();
                 }
+                else {
+                    res.json(projectsJ);
+                    projectsJ = [];
+                    res.end();
+                }
+            });
+        });
+    });
+    
+    // Insert a new resume skill 
+    app.get("/api/resume/newSkill", function(req, res, next) {
+        //Get the next skill id value 
+        db.collection("wr_skill").count({}, 
+        function(err, count) {
+            if(err) console.log("count err: ", err);
+            count = count + 1;
+            //create the new skill 
+            var skillname = req.param('skillname');
+            var skilltype = req.param('skilltype');
+            db.collection("wr_skill").insert(
+                {
+                "id":count,
+                "skillname":skillname, 
+                "skilltype":skilltype
+                }, 
+            function(err, result) {
+                if(err) return next(err);
+                res.json(result);
+                res.end();
             });
         });
     });
