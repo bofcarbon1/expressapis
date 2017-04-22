@@ -7,28 +7,43 @@ module.exports = function(app) {
 
     // MongoDB
     var MongoClient = require('mongodb').MongoClient;
-    var assert = require('assert');
-    var ObjectId = require('mongodb').ObjectID;
+    //var assert = require('assert');
+    //var ObjectId = require('mongodb').ObjectID;
     var db;
+    
+    // jwt token authentication credentials
+    var jwt = require('jsonwebtoken');
+    var secret = require('../secret.json');
+    //var Q = require('q');
+    var parmuser = "";
+    var parmpassword = "";
+    var authJ = "";
+    
+    // Web Resume  
     var personalJ = "";
-    var emailJ = "";
+    //var emailJ = "";
     var sitelinksJ = [];
+    var sitelinkJ = "";
+    var sitelinkID = "";
     var servicesJ = [];
     var projectsJ = [];
     var projectJ = "";
     var projectID = "";
-    var projecttype = "";
+    //var projecttype = "";
     var skillsJ = [];
     var skillJ = "";
     var skillID = "";
     var skilltype = "";
+  
    
     // Initialize connection once
     MongoClient.connect("mongodb://localhost:27017/test", function(err, database) {
         if(err) return console.error(err);
         db = database;
   
-        // the Mongo driver recommends starting the server here because most apps *should* fail to start if they have no DB.  If yours is the exception, move the server startup elsewhere. 
+        // the Mongo driver recommends starting the server here because most apps 
+        //*should* fail to start if they have no DB.  If yours is the exception, 
+        //move the server startup elsewhere. 
     });
 
     // Reuse database object in request handlers
@@ -92,6 +107,7 @@ module.exports = function(app) {
             if(doc) {
                 // store the link detail in a json array
                 sitelinksJ.push({ 
+                    "id" : doc.id,
                     "sitename" : doc.sitename,
                     "sitelink"  : doc.sitelink
                 });
@@ -105,6 +121,80 @@ module.exports = function(app) {
          });
     });
     
+    
+    // Get resume sitelink data by sitelink ID
+    app.get("/api/resume/sitelink", function(req, res, next) {
+        sitelinkID = req.param('sitelinkID');
+        db.collection("wr_sitelinks").find({}, function(err, docs) {
+            if(err) return next(err);
+        docs.each(function(err, doc) {
+            if(err) {
+                res.json(err); 
+                console.log("Error:",err);
+            }
+            if(doc) {
+                // store the sitelink detail in a json string
+                if (sitelinkID == doc.id) {
+                    sitelinkJ = { 
+                        "sitename" : doc.sitename,
+                        "sitelink" : doc.sitelink
+                    };
+                }
+            }
+            else {
+                res.json(sitelinkJ);
+                sitelinkJ = [];
+                res.end();
+                }
+            });
+        });
+    });
+    
+    
+    // Insert a new resume sitelink 
+    app.get("/api/resume/newSitelink", function(req, res, next) {
+        //Get the next sitelink id value 
+        db.collection("wr_sitelinks").count({}, 
+        function(err, count) {
+            if(err) console.log("count err: ", err);
+            count = count + 1;
+            //create the new sitelink 
+            var sitename = req.param('sitename');
+            var sitelink = req.param('sitelink');
+            db.collection("wr_sitelinks").insert(
+                {
+                "id":count,
+                "sitename":sitename, 
+                "sitelink":sitelink
+                }, 
+            function(err, result) {
+                if(err) return next(err);
+                res.json(result);
+                res.end();
+            });
+        });
+    });
+    
+    // Update a resume sitelink 
+    app.get("/api/resume/updSitelink", function(req, res, next) {
+        var id = req.param('id');
+        var sitename = req.param('sitename');
+        var sitelink = req.param('sitelink');
+        var query = {"id":Number(id)};
+        var doc = {
+            "id":Number(id),
+            "sitename":sitename, 
+            "sitelink":sitelink
+            };
+        db.collection("wr_sitelinks").update(query, doc, function(err, result) {
+            if(err) {
+                console.log("Error:",err);
+                return next(err);
+            };
+            res.json(result);
+            res.end();
+        });
+    });
     
     // Get resume services data 
     app.get("/api/resume/services", function(req, res, next) {
@@ -388,6 +478,37 @@ module.exports = function(app) {
         });
     });
     
+    // Authenticate user credentials and return JWT
+    app.get("/api/resume/authenticate", function(req, res, next) {
+        parmuser = req.param('user');
+        parmpassword = req.param('password');
+        authJ = "";
+        
+        db.collection("wr_user")
+        .findOne({ user: parmuser, password : parmpassword}, 
+        function(err, doc) {
+            if(err) return next(err);
+            if(doc) {
+                // Authentication Successful 
+                // Send the user name and token
+                authJ = { 
+                    "name" : doc.name,
+                    "token" : jwt.sign({ sub: doc.id },  
+                    secret.secret)
+                };
+                res.json(authJ);
+                authJ = "";
+                res.end();
+            }
+            else {
+                res.json(authJ);
+                authJ = "";
+                res.end();
+            }
+        });
+    });
+ 
+ 
     app.use(function(err, req, res){
         // handle error here.  For example, logging and returning a friendly error page
         console.log("api error:", err);

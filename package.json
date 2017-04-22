@@ -9,10 +9,14 @@
     "async": "~0.2.8",
     "body-parser": "^1.15.2",
     "express": "^3.2.6",
+    "jsonwebtoken": "^7.3.0",
+    "lodash": "^4.17.4",
     "mongodb": "^2.2.16",
     "mongoose": "^4.7.2",
     "mpromise": "^0.5.5",
     "node-restful": "^0.2.5",
+    "passport": "^0.3.2",
+    "passport-jwt": "^2.2.1",
     "socket.io": "~0.9.14"
   }
 }
